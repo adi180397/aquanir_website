@@ -23,7 +23,7 @@ def get_db_connection():
 
 @app.route('/')
 def home():
-    return "Aquanir Website Backend is running!"
+    return render_template('index.html')
 
 @app.route('/place_order', methods=['POST'])
 def place_order():
