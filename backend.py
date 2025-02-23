@@ -1,28 +1,54 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, request, jsonify
 import mysql.connector
+import os
 
 app = Flask(__name__)
 
-# Database connection
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="",
-    database="aquanir"
-)
+# MySQL connection settings
+DB_HOST = 'maglev.proxy.rlwy.net'
+DB_USER = 'root'
+DB_PASSWORD = 'CfijXJamefkpUSuRogjOQmSypuKjNMkk'
+DB_NAME = 'railway'
+DB_PORT = 22632
+
+# Connect to MySQL
+def get_db_connection():
+    return mysql.connector.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        port=DB_PORT
+    )
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return "Aquanir Website Backend is running!"
 
-@app.route('/order', methods=['POST'])
-def order():
-    product = request.form['product']
-    quantity = request.form['quantity']
-    distributor = request.form['distributor']
+@app.route('/place_order', methods=['POST'])
+def place_order():
+    try:
+        data = request.json
+        name = data.get('name')
+        email = data.get('email')
+        product = data.get('product')
+        quantity = data.get('quantity')
 
-    cursor = db.cursor()
-    cursor.execute("INSERT INTO orders (product, quantity, distributor) VALUES (%s, %s, %s)", (product, quantity, distributor))
-    db.commit()
-    cursor.close()
-    return redirect(url_for('home'))
+        if not all([name, email, product, quantity]):
+            return jsonify({"error": "All fields are required"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO orders (name, email, product, quantity) VALUES (%s, %s, %s, %s)",
+                       (name, email, product, quantity))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"message": "Order placed successfully!"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
